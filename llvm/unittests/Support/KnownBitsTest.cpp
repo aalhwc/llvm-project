@@ -1249,4 +1249,39 @@ TEST(KnownBitsTest, TruncateSatExhaustive) {
   }
 }
 
+TEST(KnownBitsTest, TightenDivisionBounds) {
+  /// LHS = 1010?? (40-43)
+  KnownBits LHS(6);
+  LHS.Zero = 0b010100;
+  LHS.One = 0b101000;
+
+  /// RHS = 0010?? (8-11)
+  KnownBits RHS(6);
+  RHS.Zero = 0b110100;
+  RHS.One = 0b001000;
+
+  /// With our solution:
+  /// Lower bound: 000100 (4)
+  /// Upper bound: 000101 (5)
+  /// Common bits: 00010?   <- ExactResult
+  KnownBits ExactResult = KnownBits::udiv(LHS, RHS, /*Exact=*/true);
+
+  /// ExactAnswer = 00010?
+  KnownBits ExactAnswer(Bits);
+  ExactAnswer.Zero = 0b111010;
+  ExactAnswer.One  = 0b000100;
+
+  EXPECT_EQ(ExactResult, ExactAnswer);
+
+  /// Without our solution:
+  /// Lower bound: 000011 (3)
+  /// Upper bound: 000101 (5)
+  /// Common bits: 000???
+  KnownBits InexactResult = KnownBits::udiv(LHS, RHS, /*Exact=*/false);
+
+  KnownBits InexactAnswer(Bits);
+  InexactAnswer.Zero = 0b111000;
+
+  EXPECT_EQ(InexactResult, InexactAnswer);
+}
 } // end anonymous namespace
